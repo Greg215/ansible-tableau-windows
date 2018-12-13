@@ -1,0 +1,42 @@
+---
+aws_admin_user: Administrator
+aws_admin_pass: 
+tableau_local_admin_user: tableau
+tableau_local_admin_pass: 
+tableau_content_admin_user: tableau
+tableau_content_admin_pass: 
+tableau_product_keys: ""
+
+tableau_open_firewall: yes
+tableau_target_version: "20182.18.1009.2120"
+tableau_install_exe_path: C:\Users\Administrator\Desktop\TableauServer-64bit-2018-2-3.exe
+tableau_install_dir: C:\TableauServer
+tableau_log_dir: C:\Users\Administrator\Desktop\logs
+tableau_version_file_path: '{{ tableau_log_dir }}\TableauServerInstallerVersion.txt'
+tableau_bin_dir: '{{ tableau_install_dir }}\packages\bin.{{ tableau_target_version }}'
+tableau_node_bootstrap_config_path: '{{ tableau_install_dir }}\nodeConfiguration.json'
+tableau_primary_config_path: '{{ tableau_install_dir }}\tableau-primary-config.json'
+tableau_primary_registration_config_path: '{{ tableau_install_dir }}\tableau-registration.json'
+
+tableau_service_user: NT AUTHORITY\\NetworkService
+tableau_http_port: 80
+tableau_controller_port: 8850
+tableau_open_firewall: yes
+tableau_ssl_enabled: no
+tableau_ssl_redirect: no
+tsm_identity_store_type: local
+
+tsm_registration:
+  zip: 
+  country: 
+  city:
+  last_name: 
+  industry: 
+  eula: 
+  title: 
+  phone: 
+  company: 
+  state: 
+  department: 
+  first_name: 
+  email: 

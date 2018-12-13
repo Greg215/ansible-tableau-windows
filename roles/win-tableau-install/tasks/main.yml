@@ -1,0 +1,75 @@
+---
+- name: create install log fodler
+  win_file:
+    path: "{{ tableau_log_dir }}"
+    state: directory
+
+- name: ensure the install log file is created
+  win_tempfile:
+    path: "{{ tableau_log_dir }}"
+    prefix: TableauServerInstaller_
+    suffix: .log
+    state: file
+  register: log_file
+
+- name: ensure the version file is created
+  win_file:
+    path: "{{ tableau_version_file_path }}"
+    state: touch
+
+- name: tableau primary install
+  win_package:
+    path: "{{ tableau_install_exe_path }}"
+    product_id: TableauServer{{ tableau_target_version }}_is1
+    creates_path: "{{ tableau_install_dir }}"
+    arguments: >
+      /VERYSILENT 
+      /accepteula
+      /DIR={{ tableau_install_dir }}
+    state: present
+  async: 2700 # escape winrm job memory limits by using async
+
+- name: tableau controller ui
+  debug:
+    msg: https://{{ ansible_host }}:{{ tableau_controller_port }}
+
+- name: check the tsm status
+  win_shell: >
+    tsm status -v 
+    -u {{ tableau_local_admin_user }}
+    -p {{ tableau_local_admin_pass }}
+  args:
+    chdir: "{{ tableau_bin_dir }}"
+    executable: cmd
+  async: 120 # escape winrm job memory limits by using async
+  poll: 5
+  register: tsm_status_check
+  ignore_errors: true
+
+- debug:
+    msg: "{{ tsm_status_check }}" 
+
+- name: restart the machine when needed
+  win_reboot:
+    reboot_timeout: 3600
+  register: reboot
+  when: tsm_status_check.rc != 0
+
+- name: wait for tsm start after machine restared
+  win_wait_for:
+    sleep: 20
+    timeout: 40
+  when: reboot.changed == true
+
+- name: check the tsm status again after reboot
+  win_shell: >
+    tsm status -v
+    -u {{ tableau_local_admin_user }}
+    -p {{ tableau_local_admin_pass }}
+  args:
+    chdir: "{{ tableau_bin_dir }}"
+    executable: cmd
+  async: 120 # escape winrm job memory limits by using async
+  poll: 5
+  when: reboot.rebooted == true
+  register: tsm_check_again

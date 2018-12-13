@@ -1,0 +1,32 @@
+---
+- name: get instance information
+  ec2_remote_facts:
+    region: eu-west-1
+    filters:
+      instance-state-name: running
+      "tag:Name": tableau-server
+  register: machines
+
+- debug:
+    msg: "{{ machines }}"
+
+- set_fact:
+    machine: "{{ machines.instances|first }}"
+
+- name: add inventory groups
+  add_host:
+    name: "{{ machine.private_ip_address }}"
+    groups: tableau
+    ansible_user: "{{ aws_admin_user }}"
+    ansible_password: "{{ aws_admin_pass }}"
+    ansible_connection: winrm
+    ansible_winrm_transport: basic    
+    ansible_winrm_server_cert_validation: ignore
+
+- name: wait for SSH to set up
+  wait_for:
+    host: "{{ machine.private_ip_address }}"
+    port: 5986
+    delay: 10
+    timeout: 360
+    state: started

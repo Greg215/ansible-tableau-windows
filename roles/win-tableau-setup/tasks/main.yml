@@ -1,0 +1,88 @@
+---
+- name: activate the installation as a trial
+  win_shell: >
+    tsm licenses activate
+    -t
+    -u {{ tableau_local_admin_user }}
+    -p {{ tableau_local_admin_pass }}
+  args:
+    chdir: "{{ tableau_bin_dir }}"
+    executable: cmd
+  when:
+    - tableau_product_keys == ""
+  async: 120 # escape winrm job memory limits by using async
+  poll: 5
+
+- name: activate the installation by production key
+  win_shell: >
+    tsm licenses activate
+    --license-key "{{ tableau_product_keys }}"
+    -u {{ tableau_local_admin_user }}
+    -p {{ tableau_local_admin_pass }}
+  args:
+    chdir: "{{ tableau_bin_dir }}"
+    executable: cmd
+  when:
+    - tableau_product_keys != ""
+  async: 120 # escape winrm job memory limits by using async
+  poll: 5
+
+- name: generate registration config file
+  win_template:
+    src: registration.json.j2
+    dest: "{{ tableau_primary_registration_config_path }}"
+
+- name: register registration config
+  win_shell: >
+    tsm register
+    --file "{{ tableau_primary_registration_config_path }}"
+    -u {{ tableau_local_admin_user }}
+    -p {{ tableau_local_admin_pass }}
+  args:
+    chdir: "{{ tableau_bin_dir }}"
+    executable: cmd
+  async: 120 # escape winrm job memory limits by using async
+  poll: 5
+
+- name: generate install config file
+  win_template:
+    src: primary-config.json.j2
+    dest: "{{ tableau_primary_config_path }}"
+
+- name: import the config
+  win_shell: >
+    tsm settings import
+    -f {{ tableau_primary_config_path }}
+    -u {{ tableau_local_admin_user }}
+    -p {{ tableau_local_admin_pass }}
+  args:
+    chdir: "{{ tableau_bin_dir }}"
+    executable: cmd
+  async: 120 # escape winrm job memory limits by using async
+  poll: 5
+  register: set_config
+
+- name: tsm to apply pending changes
+  win_shell: >
+    tsm pending-changes apply
+    --ignore-prompt
+    --ignore-warnings
+    --request-timeout 2700
+    -u {{ tableau_local_admin_user }}
+    -p {{ tableau_local_admin_pass }}
+  args:
+    chdir: "{{ tableau_bin_dir }}"
+    executable: cmd
+  async: 2700 # escape winrm job memory limits by using async
+  when: set_config is changed
+
+- name: initialize tableau server (this will take time up to 15mins)
+  win_shell: >
+    tsm initialize
+    --request-timeout 2700
+    -u {{ tableau_local_admin_user }}
+    -p {{ tableau_local_admin_pass }}
+  args:
+    chdir: "{{ tableau_bin_dir }}"
+    executable: cmd
+  async: 2700 # escape winrm job memory limits by using async

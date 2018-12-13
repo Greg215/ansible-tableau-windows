@@ -1,0 +1,46 @@
+---
+- name: check remote instance
+  hosts: localhost
+  gather_facts: false
+  roles:
+    - win-hostname
+  vars_files:
+    - vars/tableau.yml
+
+- name: apply common configuration to tableau node
+  hosts: "{{ hostvars['localhost']['machine']['private_ip_address'] }}"
+  connection: winrm
+  gather_facts: yes
+  roles:
+    - win-tableau-common
+  vars_files:
+    - vars/tableau.yml
+
+- name: install tableau and initialize tsm on the primary node
+  hosts: "{{ hostvars['localhost']['machine']['private_ip_address'] }}"
+  connection: winrm
+  gather_facts: no
+  roles:
+    - win-tableau-install
+    - win-tableau-setup
+  vars_files:
+    - vars/tableau.yml
+
+- name: prepare the application and restart it
+  hosts: "{{ hostvars['localhost']['machine']['private_ip_address'] }}"
+  connection: winrm
+  gather_facts: no
+  roles:
+    - win-tableau-restart
+  vars_files:
+    - vars/tableau.yml
+  tasks:
+    - name: add the initial user
+      win_shell: >
+        tabcmd initialuser
+        --server localhost:{{ tableau_http_port }}
+        --username {{ tableau_content_admin_user }}
+        --password {{ tableau_content_admin_pass }}
+      args:
+        chdir: "{{ tableau_bin_dir }}"
+        executable: cmd

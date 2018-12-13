@@ -1,0 +1,14 @@
+---
+- name: ensure the tableau local admin user is created
+  win_user:
+    name: "{{ tableau_local_admin_user }}"
+    description: User dedicated to running Tableau
+    groups: Administrators
+    password: "{{ tableau_local_admin_pass }}"
+    password_never_expires: yes
+    user_cannot_change_password : yes
+    state: present
+
+- name: ensure firewall rules allow tableau traffic
+  win_shell: Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False
+  when: tableau_open_firewall | bool
